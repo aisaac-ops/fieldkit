@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>FieldKit</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #e8ff47;
+    --accent2: #ff6b35;
+    --text: #f0f0f0;
+    --muted: #666;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    padding: 18px 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--accent); }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    margin: 18px 20px 0;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.3px;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #0a0a0a;
+  }
+
+  /* PAGES */
+  .page { display: none; flex: 1; flex-direction: column; padding: 20px; gap: 16px; }
+  .page.active { display: flex; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+
+  /* SEARCH */
+  .search-wrap {
+    position: relative;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    width: 16px;
+    height: 16px;
+  }
+  .search-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 16px 13px 42px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-input::placeholder { color: var(--muted); }
+
+  /* UPLOAD BUTTON */
+  .upload-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 15px;
+    background: var(--accent);
+    color: #0a0a0a;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    letter-spacing: 0.2px;
+  }
+  .upload-btn:active { transform: scale(0.98); opacity: 0.9; }
+  .upload-btn.secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  input[type="file"] { display: none; }
+
+  /* OCR RESULT */
+  .ocr-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--text);
+    min-height: 80px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .ocr-box.placeholder { color: var(--muted); font-style: italic; }
+
+  /* PREVIEW IMAGE */
+  .preview-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 10px;
+    display: none;
+  }
+
+  /* TICKET LIST */
+  .ticket-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .ticket-item:hover { border-color: var(--accent); }
+  .ticket-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--surface2);
+  }
+  .ticket-thumb-placeholder {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 22px;
+  }
+  .ticket-info { flex: 1; min-width: 0; }
+  .ticket-amount {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: -0.5px;
+  }
+  .ticket-preview {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: 'DM Mono', monospace;
+  }
+  .ticket-date {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .ticket-delete {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+  /* PROJECT LIST */
+  .project-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .project-card:hover { border-color: var(--accent); }
+  .project-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .project-name {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+  }
+  .project-meta {
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 3px;
+  }
+  .project-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+  }
+  .project-thumbs {
+    display: flex;
+    gap: 4px;
+    padding: 0 16px 14px;
+    overflow-x: auto;
+  }
+  .project-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .project-thumb-add {
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  /* NEW PROJECT FORM */
+  .input-field {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 13px 14px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field::placeholder { color: var(--muted); }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 36px;
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+  }
+  .modal-close {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; }
+
+  /* PHOTO GRID in modal */
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .photo-grid img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .photo-grid-add {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  /* OCR LOADING */
+  .ocr-loading {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .ocr-loading.active { display: flex; }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SAVE TICKET FORM */
+  .field-row { display: flex; flex-direction: column; gap: 6px; }
+  .field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* SCROLLABLE LISTS */
+  .list-scroll { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; padding-bottom: 10px; }
+
+  .highlight { color: var(--accent); font-weight: 700; }
+
+  /* AMOUNT BADGE */
+  /* DRIVE STATUS */
+  .drive-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    margin: 12px 20px 0;
+    gap: 10px;
+  }
+  .drive-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .drive-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .drive-dot.connected { background: #4ade80; }
+  .drive-btn-small {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.2s;
+  }
+  .drive-btn-small:hover { border-color: var(--accent); }
+  .drive-btn-small.uploading { color: var(--accent); }
+
+  .upload-to-drive {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+  }
+  .upload-to-drive:active { opacity: 0.8; }
+  .upload-to-drive:disabled { opacity: 0.5; cursor: default; }
+
+  .amount-badge {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(232,255,71,0.12);
+    border: 1px solid rgba(232,255,71,0.25);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Field<span>Kit</span></div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)" id="stats-header"></div>
+</div>
+
+<div class="drive-bar">
+  <div class="drive-status">
+    <div class="drive-dot" id="drive-dot"></div>
+    <span id="drive-status-text">Google Drive desconectado</span>
+  </div>
+  <button class="drive-btn-small" id="drive-connect-btn" onclick="connectDrive()">Conectar</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('tickets')">🧾 Tickets</button>
+  <button class="tab" onclick="switchTab('jobsites')">📸 Job Sites</button>
+</div>
+
+<!-- ====== TICKETS PAGE ====== -->
+<div class="page active" id="page-tickets">
+
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="ticket-search" placeholder="Buscar monto, texto del ticket…" oninput="searchTickets()">
+  </div>
+
+  <button class="upload-btn" onclick="document.getElementById('ticket-file-input').click()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Capturar / Subir Ticket
+  </button>
+  <input type="file" id="ticket-file-input" accept="image/*" capture="environment" onchange="handleTicketUpload(event)">
+
+  <!-- OCR Modal -->
+  <div class="modal-overlay" id="ocr-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Nuevo Ticket</div>
+        <div class="modal-close" onclick="closeOcrModal()">✕</div>
+      </div>
+      <img class="preview-img" id="ticket-preview" src="" alt="">
+      <div class="ocr-loading" id="ocr-loading"><div class="spinner"></div> Leyendo texto…</div>
+      <div class="field-row">
+        <div class="field-label">Texto extraído (OCR)</div>
+        <div class="ocr-box placeholder" id="ocr-result">El texto del ticket aparecerá aquí…</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Monto</div>
+        <input class="input-field" id="ticket-amount" placeholder="$0.00" type="text">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nota (opcional)</div>
+        <input class="input-field" id="ticket-note" placeholder="Proveedor, categoría…">
+      </div>
+      <button class="upload-btn" onclick="saveTicket()">Guardar Ticket</button>
+      <button class="upload-to-drive" id="drive-ticket-btn" onclick="saveTicketAndDrive()" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6.28 3L1 12.39 3.72 17h5.87L14.88 6.7 12.16 3H6.28zm11.44 0l-2.72 3.7 5.87 10.3H22L16.72 3h-1zm-8.6 11.39L6.4 17h11.2l-2.72-4.61H9.12z"/></svg>
+        Guardar en Drive
+      </button>
+    </div>
+  </div>
+
+  <div class="section-title" id="tickets-count-label">Tickets guardados</div>
+  <div class="list-scroll" id="tickets-list"></div>
+</div>
+
+<!-- ====== JOB SITES PAGE ====== -->
+<div class="page" id="page-jobsites">
+
+  <button class="upload-btn" onclick="openNewProjectModal()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo Proyecto
+  </button>
+
+  <!-- New Project Modal -->
+  <div class="modal-overlay" id="new-project-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Nuevo Proyecto</div>
+        <div class="modal-close" onclick="closeNewProjectModal()">✕</div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">Nombre del proyecto</div>
+        <input class="input-field" id="new-project-name" placeholder="Ej. Casa Polanco, Oficina CDMX…">
+      </div>
+      <div class="field-row">
+        <div class="field-label">Dirección (opcional)</div>
+        <input class="input-field" id="new-project-address" placeholder="Calle, colonia…">
+      </div>
+      <button class="upload-btn" onclick="createProject()">Crear Proyecto</button>
+    </div>
+  </div>
+
+  <!-- Project Detail Modal -->
+  <div class="modal-overlay" id="project-detail-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="detail-project-name">Proyecto</div>
+        <div class="modal-close" onclick="closeProjectDetail()">✕</div>
+      </div>
+      <div class="field-label" id="detail-project-address" style="margin-top:-6px"></div>
+      <button class="upload-btn secondary" onclick="document.getElementById('project-photo-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Agregar Foto
+      </button>
+      <input type="file" id="project-photo-input" accept="image/*" capture="environment" onchange="addPhotoToProject(event)">
+      <div class="section-title" id="detail-photos-count">Fotos</div>
+      <div id="drive-project-upload-wrap" style="display:none;margin-bottom:8px">
+        <button class="upload-to-drive" style="width:100%;justify-content:center" onclick="uploadProjectToDrive()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6.28 3L1 12.39 3.72 17h5.87L14.88 6.7 12.16 3H6.28zm11.44 0l-2.72 3.7 5.87 10.3H22L16.72 3h-1zm-8.6 11.39L6.4 17h11.2l-2.72-4.61H9.12z"/></svg>
+          Subir fotos del proyecto a Drive
+        </button>
+      </div>
+      <div class="photo-grid" id="detail-photo-grid"></div>
+    </div>
+  </div>
+
+  <div class="section-title" id="projects-count-label">Proyectos</div>
+  <div class="list-scroll" id="projects-list"></div>
+</div>
+
+<!-- Full image viewer -->
+<div class="modal-overlay" id="img-viewer" onclick="closeImgViewer()" style="align-items:center;background:rgba(0,0,0,0.95)">
+  <img id="img-viewer-img" style="max-width:95%;max-height:90dvh;border-radius:10px;object-fit:contain" src="" alt="">
+</div>
+
+<script>
+// ===================== STATE =====================
+let state = {
+  tickets: [],
+  projects: [],
+  currentTicketImg: null,
+  currentProjectId: null,
+};
+
+function save() {
+  try { localStorage.setItem('fieldkit', JSON.stringify(state)); } catch(e){}
+}
+function load() {
+  try {
+    const d = localStorage.getItem('fieldkit');
+    if (d) state = { ...state, ...JSON.parse(d) };
+  } catch(e){}
+}
+
+// ===================== TABS =====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='tickets')||(i===1&&tab==='jobsites')));
+  document.getElementById('page-tickets').classList.toggle('active', tab==='tickets');
+  document.getElementById('page-jobsites').classList.toggle('active', tab==='jobsites');
+  if (tab==='tickets') renderTickets();
+  else renderProjects();
+}
+
+// ===================== UTILS =====================
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'2-digit' });
+}
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function highlightText(text, query) {
+  if (!query) return escapeHtml(text);
+  const re = new RegExp('(' + query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+  return escapeHtml(text).replace(re, '<span class="highlight">$1</span>');
+}
+
+// ===================== SIMPLE OCR (Tesseract.js) =====================
+let tesseractReady = false;
+function loadTesseract(cb) {
+  if (window.Tesseract) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+async function runOCR(file) {
+  return new Promise((resolve) => {
+    loadTesseract(async () => {
+      try {
+        const worker = await Tesseract.createWorker('spa+eng');
+        const { data: { text } } = await worker.recognize(file);
+        await worker.terminate();
+        resolve(text.trim());
+      } catch(e) {
+        resolve('');
+      }
+    });
+  });
+}
+
+function extractAmount(text) {
+  // Try to find amounts like $1,234.56 or $1234 or 1,234.50
+  const patterns = [
+    /\$[\s]*([\d,]+\.?\d*)/g,
+    /total[:\s]*([\d,]+\.?\d*)/gi,
+    /importe[:\s]*([\d,]+\.?\d*)/gi,
+    /([\d,]+\.\d{2})/g,
+  ];
+  for (const pat of patterns) {
+    const matches = [...text.matchAll(pat)];
+    if (matches.length) {
+      // Return the largest numeric value found
+      const nums = matches.map(m => parseFloat((m[1]||m[0]).replace(/,/g,'')));
+      const max = Math.max(...nums);
+      if (max > 0) return '$' + max.toLocaleString('es-MX', {minimumFractionDigits:2,maximumFractionDigits:2});
+    }
+  }
+  return '';
+}
+
+// ===================== TICKETS =====================
+async function handleTicketUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  state.currentTicketImg = null;
+
+  // Show modal
+  document.getElementById('ocr-modal').classList.add('open');
+  document.getElementById('ocr-result').textContent = 'Leyendo texto…';
+  document.getElementById('ocr-result').classList.add('placeholder');
+  document.getElementById('ticket-amount').value = '';
+  document.getElementById('ticket-note').value = '';
+
+  // Preview
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    const imgEl = document.getElementById('ticket-preview');
+    imgEl.src = ev.target.result;
+    imgEl.style.display = 'block';
+    state.currentTicketImg = ev.target.result;
+
+    // OCR
+    document.getElementById('ocr-loading').classList.add('active');
+    const text = await runOCR(file);
+    document.getElementById('ocr-loading').classList.remove('active');
+
+    if (text) {
+      document.getElementById('ocr-result').textContent = text;
+      document.getElementById('ocr-result').classList.remove('placeholder');
+      const amt = extractAmount(text);
+      if (amt) document.getElementById('ticket-amount').value = amt;
+    } else {
+      document.getElementById('ocr-result').textContent = 'No se pudo leer texto. Puedes escribirlo abajo.';
+      document.getElementById('ocr-result').classList.add('placeholder');
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function closeOcrModal() {
+  document.getElementById('ocr-modal').classList.remove('open');
+}
+
+function saveTicket() {
+  const text = document.getElementById('ocr-result').textContent;
+  const amount = document.getElementById('ticket-amount').value.trim();
+  const note = document.getElementById('ticket-note').value.trim();
+  if (!text || text.includes('aparecerá aquí')) { alert('Primero sube una foto de ticket.'); return; }
+
+  state.tickets.unshift({
+    id: Date.now(),
+    text,
+    amount,
+    note,
+    img: state.currentTicketImg,
+    date: Date.now(),
+  });
+  save();
+  closeOcrModal();
+  renderTickets();
+}
+
+function deleteTicket(id) {
+  state.tickets = state.tickets.filter(t => t.id !== id);
+  save();
+  renderTickets();
+}
+
+function searchTickets() { renderTickets(); }
+
+function renderTickets() {
+  const q = (document.getElementById('ticket-search').value || '').toLowerCase().trim();
+  const list = document.getElementById('tickets-list');
+  const label = document.getElementById('tickets-count-label');
+
+  let items = state.tickets;
+  if (q) {
+    items = items.filter(t =>
+      (t.text||'').toLowerCase().includes(q) ||
+      (t.amount||'').toLowerCase().includes(q) ||
+      (t.note||'').toLowerCase().includes(q)
+    );
+  }
+
+  label.textContent = q ? `${items.length} resultado(s) para "${q}"` : `${items.length} ticket(s) guardado(s)`;
+
+  if (!items.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🧾</div>${q ? 'Sin resultados.' : 'No hay tickets aún.<br>Sube una foto para empezar.'}</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(t => `
+    <div class="ticket-item" onclick="viewImg('${t.img||''}')">
+      ${t.img ? `<img class="ticket-thumb" src="${t.img}" alt="">` : `<div class="ticket-thumb-placeholder">🧾</div>`}
+      <div class="ticket-info">
+        ${t.amount ? `<div class="ticket-amount">${highlightText(t.amount, q)}</div>` : ''}
+        ${t.note ? `<div class="amount-badge">${highlightText(t.note, q)}</div>` : ''}
+        <div class="ticket-preview">${highlightText((t.text||'').substring(0,80), q)}</div>
+        <div class="ticket-date">${formatDate(t.date)}</div>
+      </div>
+      <button class="ticket-delete" onclick="event.stopPropagation();deleteTicket(${t.id})">✕</button>
+    </div>
+  `).join('');
+}
+
+// ===================== PROJECTS =====================
+function openNewProjectModal() {
+  document.getElementById('new-project-modal').classList.add('open');
+  document.getElementById('new-project-name').value = '';
+  document.getElementById('new-project-address').value = '';
+  setTimeout(() => document.getElementById('new-project-name').focus(), 100);
+}
+function closeNewProjectModal() {
+  document.getElementById('new-project-modal').classList.remove('open');
+}
+
+function createProject() {
+  const name = document.getElementById('new-project-name').value.trim();
+  if (!name) { alert('Escribe un nombre para el proyecto.'); return; }
+  const address = document.getElementById('new-project-address').value.trim();
+  state.projects.unshift({ id: Date.now(), name, address, photos: [], created: Date.now() });
+  save();
+  closeNewProjectModal();
+  renderProjects();
+}
+
+function openProjectDetail(id) {
+  state.currentProjectId = id;
+  const proj = state.projects.find(p => p.id === id);
+  if (!proj) return;
+  document.getElementById('detail-project-name').textContent = proj.name;
+  document.getElementById('detail-project-address').textContent = proj.address || '';
+  renderDetailPhotos(proj);
+  const projWrap = document.getElementById('drive-project-upload-wrap');
+  if (projWrap) projWrap.style.display = driveToken ? 'block' : 'none';
+  document.getElementById('project-detail-modal').classList.add('open');
+}
+
+function closeProjectDetail() {
+  document.getElementById('project-detail-modal').classList.remove('open');
+  renderProjects();
+}
+
+function renderDetailPhotos(proj) {
+  const grid = document.getElementById('detail-photo-grid');
+  const count = document.getElementById('detail-photos-count');
+  count.textContent = `${proj.photos.length} foto(s)`;
+  grid.innerHTML = proj.photos.map((p,i) => `
+    <img src="${p.img}" alt="" onclick="viewImg('${p.img}')" style="cursor:pointer">
+  `).join('') + `<div class="photo-grid-add" onclick="document.getElementById('project-photo-input').click()">＋</div>`;
+}
+
+function addPhotoToProject(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const proj = state.projects.find(p => p.id === state.currentProjectId);
+    if (!proj) return;
+    proj.photos.unshift({ img: ev.target.result, date: Date.now() });
+    save();
+    renderDetailPhotos(proj);
+    renderProjects();
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderProjects() {
+  const list = document.getElementById('projects-list');
+  const label = document.getElementById('projects-count-label');
+  label.textContent = `${state.projects.length} proyecto(s)`;
+
+  if (!state.projects.length) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🏗️</div>Sin proyectos aún.<br>Crea uno para empezar.</div>`;
+    return;
+  }
+
+  list.innerHTML = state.projects.map(p => `
+    <div class="project-card" onclick="openProjectDetail(${p.id})">
+      <div class="project-header">
+        <div>
+          <div class="project-name">${escapeHtml(p.name)}</div>
+          ${p.address ? `<div class="project-meta">📍 ${escapeHtml(p.address)}</div>` : ''}
+          <div class="project-meta">${formatDate(p.created)}</div>
+        </div>
+        <div class="project-badge">${p.photos.length} foto${p.photos.length!==1?'s':''}</div>
+      </div>
+      ${p.photos.length ? `
+      <div class="project-thumbs">
+        ${p.photos.slice(0,5).map(ph => `<img class="project-thumb" src="${ph.img}" alt="">`).join('')}
+        ${p.photos.length>5?`<div class="project-thumb-add">+${p.photos.length-5}</div>`:''}
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ===================== IMAGE VIEWER =====================
+function viewImg(src) {
+  if (!src) return;
+  document.getElementById('img-viewer-img').src = src;
+  document.getElementById('img-viewer').classList.add('open');
+}
+function closeImgViewer() {
+  document.getElementById('img-viewer').classList.remove('open');
+}
+
+// ===================== GOOGLE DRIVE =====================
+const GDRIVE_CLIENT_ID = '901427226044-f1h6v8h2p6lfpree8ude6bhr19ftb3rc.apps.googleusercontent.com';
+const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+let driveToken = null;
+
+function updateDriveUI() {
+  const dot = document.getElementById('drive-dot');
+  const txt = document.getElementById('drive-status-text');
+  const btn = document.getElementById('drive-connect-btn');
+  const ticketBtn = document.getElementById('drive-ticket-btn');
+  const projWrap = document.getElementById('drive-project-upload-wrap');
+
+  if (driveToken) {
+    dot.classList.add('connected');
+    txt.textContent = 'Google Drive conectado ✓';
+    btn.textContent = 'Desconectar';
+    btn.onclick = disconnectDrive;
+    if (ticketBtn) ticketBtn.disabled = false;
+    if (projWrap) projWrap.style.display = 'block';
+  } else {
+    dot.classList.remove('connected');
+    txt.textContent = 'Google Drive desconectado';
+    btn.textContent = 'Conectar';
+    btn.onclick = connectDrive;
+    if (ticketBtn) ticketBtn.disabled = true;
+    if (projWrap) projWrap.style.display = 'none';
+  }
+}
+
+function connectDrive() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GDRIVE_CLIENT_ID,
+    scope: GDRIVE_SCOPES,
+    callback: (resp) => {
+      if (resp.access_token) {
+        driveToken = resp.access_token;
+        updateDriveUI();
+        showToast('✓ Google Drive conectado');
+      }
+    },
+  });
+  client.requestAccessToken();
+}
+
+function disconnectDrive() {
+  if (driveToken) google.accounts.oauth2.revoke(driveToken);
+  driveToken = null;
+  updateDriveUI();
+  showToast('Drive desconectado');
+}
+
+async function getOrCreateFolder(name, parentId) {
+  // Search for existing folder
+  const q = `name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentId ? ` and '${parentId}' in parents` : ''}`;
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`, {
+    headers: { Authorization: `Bearer ${driveToken}` }
+  });
+  const data = await res.json();
+  if (data.files && data.files.length > 0) return data.files[0].id;
+
+  // Create folder
+  const cr = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${driveToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parentId ? { parents: [parentId] } : {}) })
+  });
+  const folder = await cr.json();
+  return folder.id;
+}
+
+async function uploadFileToDrive(base64data, filename, mimeType, folderId) {
+  const byteStr = atob(base64data.split(',')[1]);
+  const ab = new ArrayBuffer(byteStr.length);
+  const ia = new Uint8Array(ab);
+  for (let i = 0; i < byteStr.length; i++) ia[i] = byteStr.charCodeAt(i);
+  const blob = new Blob([ab], { type: mimeType });
+
+  const meta = { name: filename, parents: [folderId] };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+  form.append('file', blob);
+
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${driveToken}` },
+    body: form
+  });
+  return res.json();
+}
+
+async function saveTicketAndDrive() {
+  const text = document.getElementById('ocr-result').textContent;
+  const amount = document.getElementById('ticket-amount').value.trim();
+  const note = document.getElementById('ticket-note').value.trim();
+  if (!text || text.includes('aparecerá aquí')) { alert('Primero sube una foto de ticket.'); return; }
+  if (!driveToken) { alert('Primero conecta Google Drive.'); return; }
+
+  // Save locally first
+  const ticket = { id: Date.now(), text, amount, note, img: state.currentTicketImg, date: Date.now() };
+  state.tickets.unshift(ticket);
+  save();
+  closeOcrModal();
+  renderTickets();
+
+  // Upload to Drive
+  showToast('⬆️ Subiendo a Drive…');
+  try {
+    const rootId = await getOrCreateFolder('FieldKit');
+    const ticketsId = await getOrCreateFolder('Tickets', rootId);
+    const date = new Date().toISOString().slice(0,10);
+    const filename = `ticket_${date}_${ticket.id}.jpg`;
+    await uploadFileToDrive(state.currentTicketImg, filename, 'image/jpeg', ticketsId);
+
+    // Also upload text file
+    const textBlob = `Fecha: ${new Date(ticket.date).toLocaleString('es-MX')}\nMonto: ${amount}\nNota: ${note}\n\n${text}`;
+    const textB64 = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(textBlob)));
+    await uploadFileToDrive(textB64, filename.replace('.jpg','.txt'), 'text/plain', ticketsId);
+
+    showToast('✓ Ticket guardado en Drive/FieldKit/Tickets');
+  } catch(e) {
+    showToast('❌ Error subiendo a Drive');
+  }
+}
+
+async function uploadProjectToDrive() {
+  const proj = state.projects.find(p => p.id === state.currentProjectId);
+  if (!proj || !driveToken) return;
+  if (!proj.photos.length) { showToast('No hay fotos en este proyecto'); return; }
+
+  showToast(`⬆️ Subiendo ${proj.photos.length} foto(s)…`);
+  try {
+    const rootId = await getOrCreateFolder('FieldKit');
+    const jobsId = await getOrCreateFolder('JobSites', rootId);
+    const projId = await getOrCreateFolder(proj.name, jobsId);
+
+    let i = 0;
+    for (const photo of proj.photos) {
+      i++;
+      const date = new Date(photo.date).toISOString().slice(0,10);
+      const filename = `${proj.name}_${date}_${i}.jpg`;
+      await uploadFileToDrive(photo.img, filename, 'image/jpeg', projId);
+    }
+    showToast(`✓ ${proj.photos.length} foto(s) en Drive/FieldKit/JobSites/${proj.name}`);
+  } catch(e) {
+    showToast('❌ Error subiendo fotos');
+  }
+}
+
+// Toast notification
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;font-family:DM Mono,monospace;font-size:13px;padding:10px 18px;border-radius:20px;z-index:9999;transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity = '0', 3000);
+}
+
+// ===================== INIT =====================
+load();
+renderTickets();
+renderProjects();
+updateDriveUI();
+
+// Update header stats
+function updateStats() {
+  const el = document.getElementById('stats-header');
+  el.textContent = `${state.tickets.length}T · ${state.projects.length}P`;
+}
+setInterval(updateStats, 500);
+</script>
+</body>
+</html>
