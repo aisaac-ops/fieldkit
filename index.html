@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0a">
+<title>FieldKit</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0a0a0a;--surface:#141414;--surface2:#1e1e1e;--border:#2a2a2a;--accent:#e8ff47;--accent2:#ff6b35;--text:#f0f0f0;--muted:#666;--radius:14px; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100dvh;display:flex;flex-direction:column;overflow-x:hidden;}
+  .header{padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;}
+  .logo{font-size:22px;font-weight:800;letter-spacing:-0.5px;} .logo span{color:var(--accent);}
+  .drive-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin:12px 20px 0;gap:10px;}
+  .drive-status{display:flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
+  .drive-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;} .drive-dot.connected{background:#4ade80;}
+  .drive-btn-small{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+  .tabs{display:flex;margin:18px 20px 0;background:var(--surface);border-radius:12px;padding:4px;gap:4px;}
+  .tab{flex:1;padding:10px;border:none;background:transparent;color:var(--muted);font-family:'Syne',sans-serif;font-size:13px;font-weight:600;border-radius:9px;cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;}
+  .tab.active{background:var(--accent);color:#0a0a0a;}
+  .page{display:none;flex:1;flex-direction:column;padding:20px;gap:16px;} .page.active{display:flex;}
+  .section-title{font-size:11px;font-weight:600;letter-spacing:2px;color:var(--muted);text-transform:uppercase;font-family:'DM Mono',monospace;}
+  .upload-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:15px;background:var(--accent);color:#0a0a0a;border:none;border-radius:12px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.2s,transform 0.1s;letter-spacing:0.2px;}
+  .upload-btn:active{transform:scale(0.98);opacity:0.9;} .upload-btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+  input[type="file"]{display:none;}
+  .search-wrap{position:relative;} .search-wrap svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);width:16px;height:16px;}
+  .search-input{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 16px 13px 42px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;}
+  .search-input:focus{border-color:var(--accent);} .search-input::placeholder{color:var(--muted);}
+  .totals-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;}
+  .totals-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+  .totals-amount{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--accent);letter-spacing:-0.5px;margin-top:2px;}
+  .totals-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);text-align:right;}
+  .ocr-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-family:'DM Mono',monospace;font-size:13px;line-height:1.7;color:var(--text);min-height:80px;white-space:pre-wrap;word-break:break-word;}
+  .ocr-box.placeholder{color:var(--muted);font-style:italic;}
+  .preview-img{width:100%;max-height:200px;object-fit:cover;border-radius:10px;display:none;}
+  .ocr-loading{display:none;align-items:center;gap:10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--accent);}
+  .ocr-loading.active{display:flex;}
+  .spinner{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .ticket-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;gap:14px;align-items:flex-start;cursor:pointer;transition:border-color 0.2s;}
+  .ticket-item:hover{border-color:var(--accent);}
+  .ticket-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;flex-shrink:0;background:var(--surface2);}
+  .ticket-thumb-ph{width:56px;height:56px;border-radius:8px;background:var(--surface2);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px;}
+  .ticket-info{flex:1;min-width:0;}
+  .ticket-amount{font-size:18px;font-weight:800;color:var(--accent);font-family:'DM Mono',monospace;letter-spacing:-0.5px;}
+  .ticket-date{font-size:11px;color:var(--muted);margin-top:6px;font-family:'DM Mono',monospace;}
+  .ticket-delete{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;font-size:18px;line-height:1;}
+  .synced-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);margin-left:6px;vertical-align:middle;}
+  .synced-dot.ok{background:#4ade80;}
+  .tag-badge{display:inline-flex;align-items:center;background:rgba(232,255,71,0.1);border:1px solid rgba(232,255,71,0.2);border-radius:6px;padding:2px 8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--accent);margin-top:4px;margin-right:3px;}
+  .cat-badge{background:rgba(255,107,53,0.1);border-color:rgba(255,107,53,0.2);color:var(--accent2);}
+  .project-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border-color 0.2s;}
+  .project-card:hover{border-color:var(--accent);}
+  .project-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;}
+  .project-name{font-size:16px;font-weight:700;letter-spacing:-0.3px;}
+  .project-meta{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:3px;}
+  .project-badge{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap;}
+  .project-thumbs{display:flex;gap:4px;padding:0 16px 14px;overflow-x:auto;}
+  .project-thumb{width:72px;height:72px;border-radius:8px;object-fit:cover;flex-shrink:0;}
+  .project-total{padding:0 16px 12px;font-family:'DM Mono',monospace;font-size:12px;color:var(--accent2);}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:100;align-items:flex-end;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-width:500px;display:flex;flex-direction:column;gap:14px;max-height:92dvh;overflow-y:auto;}
+  .modal-title{font-size:18px;font-weight:800;letter-spacing:-0.4px;}
+  .modal-close{background:var(--surface2);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:18px;flex-shrink:0;}
+  .modal-header{display:flex;justify-content:space-between;align-items:center;}
+  .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .photo-cell{position:relative;aspect-ratio:1;}
+  .photo-cell img{width:100%;height:100%;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity 0.2s;}
+  .photo-cell.selected img{opacity:0.55;}
+  .photo-check{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:var(--accent);display:none;align-items:center;justify-content:center;font-size:13px;color:#000;font-weight:800;}
+  .photo-cell.selected .photo-check{display:flex;}
+  .photo-grid-add{aspect-ratio:1;border-radius:8px;background:var(--surface2);border:1.5px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--muted);cursor:pointer;}
+  .input-field{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;}
+  .input-field:focus{border-color:var(--accent);} .input-field::placeholder{color:var(--muted);}
+  select.input-field{-webkit-appearance:none;}
+  .field-row{display:flex;flex-direction:column;gap:6px;}
+  .field-label{font-size:11px;font-weight:600;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;font-family:'DM Mono',monospace;}
+  .list-scroll{display:flex;flex-direction:column;gap:10px;overflow-y:auto;flex:1;padding-bottom:10px;}
+  .highlight{color:var(--accent);font-weight:700;}
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);font-family:'DM Mono',monospace;font-size:13px;}
+  .empty-icon{font-size:40px;margin-bottom:12px;}
+  .select-bar{display:none;background:var(--surface2);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;}
+  .select-bar.active{display:flex;}
+  .select-bar span{font-family:'DM Mono',monospace;font-size:12px;color:var(--accent);}
+  .detail-ticket-row{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Field<span>Kit</span></div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)" id="stats-header"></div>
+</div>
+
+<div class="drive-bar">
+  <div class="drive-status">
+    <div class="drive-dot" id="drive-dot"></div>
+    <span id="drive-status-text">Google Drive desconectado</span>
+  </div>
+  <button class="drive-btn-small" id="drive-connect-btn" onclick="connectDrive()">Conectar</button>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('tickets')">🧾 Tickets</button>
+  <button class="tab" onclick="switchTab('jobsites')">📸 Job Sites</button>
+</div>
+
+<!-- TICKETS PAGE -->
+<div class="page active" id="page-tickets">
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="ticket-search" placeholder="Buscar monto, categoría, proyecto…" oninput="renderTickets()">
+  </div>
+  <div class="totals-bar">
+    <div><div class="totals-label">Total visible</div><div class="totals-amount" id="total-amount">$0.00</div></div>
+    <div class="totals-count" id="total-count">0 tickets</div>
+  </div>
+  <button class="upload-btn" onclick="document.getElementById('ticket-file-input').click()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    Capturar / Subir Ticket
+  </button>
+  <input type="file" id="ticket-file-input" accept="image/*" capture="environment" onchange="handleTicketUpload(event)">
+
+  <!-- OCR Modal -->
+  <div class="modal-overlay" id="ocr-modal">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Nuevo Ticket</div><div class="modal-close" onclick="closeOcrModal()">✕</div></div>
+      <img class="preview-img" id="ticket-preview" src="" alt="">
+      <div class="ocr-loading" id="ocr-loading"><div class="spinner"></div> Leyendo texto…</div>
+      <div class="field-row"><div class="field-label">Texto extraído (OCR)</div><div class="ocr-box placeholder" id="ocr-result">El texto del ticket aparecerá aquí…</div></div>
+      <div class="field-row"><div class="field-label">Monto</div><input class="input-field" id="ticket-amount" placeholder="$0.00" type="text"></div>
+      <div class="field-row">
+        <div class="field-label">Categoría</div>
+        <select class="input-field" id="ticket-category">
+          <option value="">Sin categoría</option>
+          <option value="Materiales">🧱 Materiales</option>
+          <option value="Herramienta">🔧 Herramienta</option>
+          <option value="Transporte">🚛 Transporte</option>
+          <option value="Mano de obra">👷 Mano de obra</option>
+          <option value="Comida">🍔 Comida</option>
+          <option value="Otro">📦 Otro</option>
+        </select>
+      </div>
+      <div class="field-row"><div class="field-label">Asignar a proyecto</div><select class="input-field" id="ticket-project"><option value="">Sin proyecto</option></select></div>
+      <div class="field-row"><div class="field-label">Nota (opcional)</div><input class="input-field" id="ticket-note" placeholder="Proveedor, detalle…"></div>
+      <button class="upload-btn" onclick="saveTicket()">Guardar Ticket</button>
+    </div>
+  </div>
+
+  <div class="section-title" id="tickets-count-label">Tickets</div>
+  <div class="list-scroll" id="tickets-list"></div>
+</div>
+
+<!-- JOB SITES PAGE -->
+<div class="page" id="page-jobsites">
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input class="search-input" id="project-search" placeholder="Buscar proyecto o dirección…" oninput="renderProjects()">
+  </div>
+  <button class="upload-btn" onclick="openNewProjectModal()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Nuevo Proyecto
+  </button>
+
+  <!-- New Project Modal -->
+  <div class="modal-overlay" id="new-project-modal">
+    <div class="modal">
+      <div class="modal-header"><div class="modal-title">Nuevo Proyecto</div><div class="modal-close" onclick="closeNewProjectModal()">✕</div></div>
+      <div class="field-row"><div class="field-label">Nombre del proyecto</div><input class="input-field" id="new-project-name" placeholder="Ej. Casa Polanco, Oficina CDMX…"></div>
+      <div class="field-row"><div class="field-label">Dirección (opcional)</div><input class="input-field" id="new-project-address" placeholder="Calle, colonia…"></div>
+      <button class="upload-btn" onclick="createProject()">Crear Proyecto</button>
+    </div>
+  </div>
+
+  <!-- Project Detail Modal -->
+  <div class="modal-overlay" id="project-detail-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="detail-project-name">Proyecto</div>
+        <div class="modal-close" onclick="closeProjectDetail()">✕</div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:-8px" id="detail-project-address"></div>
+
+      <!-- Linked tickets -->
+      <div id="detail-tickets-wrap" style="display:none">
+        <div class="field-label" style="margin-bottom:8px">Gastos del proyecto</div>
+        <div id="detail-tickets-list" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:14px;color:var(--accent);margin-top:8px;text-align:right" id="detail-tickets-total"></div>
+      </div>
+
+      <button class="upload-btn secondary" onclick="document.getElementById('project-photo-input').click()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Agregar Foto
+      </button>
+      <input type="file" id="project-photo-input" accept="image/*" capture="environment" onchange="addPhotoToProject(event)">
+
+      <!-- Select mode bar -->
+      <div class="select-bar" id="select-bar">
+        <span id="selected-count-lbl">0 seleccionadas</span>
+        <div style="display:flex;gap:8px">
+          <button class="drive-btn-small" onclick="cancelSelectMode()">Cancelar</button>
+          <button class="drive-btn-small" style="background:var(--accent);color:#000;border-color:var(--accent)" onclick="generatePDF()">Generar PDF</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="section-title" id="detail-photos-count">Fotos</div>
+        <button class="drive-btn-small" id="pdf-btn" onclick="enterSelectMode()" style="font-size:11px">📄 PDF</button>
+      </div>
+      <div class="photo-grid" id="detail-photo-grid"></div>
+    </div>
+  </div>
+
+  <div class="section-title" id="projects-count-label">Proyectos</div>
+  <div class="list-scroll" id="projects-list"></div>
+</div>
+
+<!-- Image viewer -->
+<div class="modal-overlay" id="img-viewer" onclick="closeImgViewer()" style="align-items:center;background:rgba(0,0,0,0.95)">
+  <img id="img-viewer-img" style="max-width:95%;max-height:90dvh;border-radius:10px;object-fit:contain" src="" alt="">
+</div>
+
+<script>
+// STATE
+let state = { tickets:[], projects:[], currentTicketImg:null, currentProjectId:null };
+let selectMode = false, selectedPhotos = new Set();
+
+function save(){ try{localStorage.setItem('fieldkit',JSON.stringify(state));}catch(e){} }
+function load(){ try{const d=localStorage.getItem('fieldkit');if(d)state={...state,...JSON.parse(d)};}catch(e){} }
+
+// UTILS
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'2-digit'}); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function hl(text,q){ if(!q)return esc(text); return esc(text).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<span class="highlight">$1</span>'); }
+function parseAmt(s){ if(!s)return 0; const n=parseFloat(s.replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
+function fmtMXN(n){ return '$'+n.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function getProjName(id){ const p=state.projects.find(p=>String(p.id)===String(id)); return p?p.name:''; }
+
+// IMAGE COMPRESSION
+function compressImage(file, maxW=1200, q=0.75){
+  return new Promise(res=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        res(c.toDataURL('image/jpeg',q));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// TABS
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='tickets')||(i===1&&tab==='jobsites')));
+  document.getElementById('page-tickets').classList.toggle('active',tab==='tickets');
+  document.getElementById('page-jobsites').classList.toggle('active',tab==='jobsites');
+  if(tab==='tickets')renderTickets(); else renderProjects();
+}
+
+// OCR
+function loadTesseract(cb){ if(window.Tesseract){cb();return;} const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js';s.onload=cb;document.head.appendChild(s); }
+async function runOCR(file){
+  return new Promise(res=>{ loadTesseract(async()=>{ try{ const w=await Tesseract.createWorker('spa+eng'); const{data:{text}}=await w.recognize(file); await w.terminate(); res(text.trim()); }catch(e){res('');} }); });
+}
+function extractAmount(text){
+  const patterns=[/\$[\s]*([\d,]+\.?\d*)/g,/total[:\s]*([\d,]+\.?\d*)/gi,/importe[:\s]*([\d,]+\.?\d*)/gi,/([\d,]+\.\d{2})/g];
+  for(const pat of patterns){ const m=[...text.matchAll(pat)]; if(m.length){ const nums=m.map(x=>parseFloat((x[1]||x[0]).replace(/,/g,''))); const max=Math.max(...nums); if(max>0)return fmtMXN(max); } }
+  return '';
+}
+
+// TICKETS
+async function handleTicketUpload(e){
+  const file=e.target.files[0]; if(!file)return; e.target.value='';
+  state.currentTicketImg=null;
+  document.getElementById('ocr-modal').classList.add('open');
+  document.getElementById('ocr-result').textContent='Leyendo texto…';
+  document.getElementById('ocr-result').classList.add('placeholder');
+  document.getElementById('ticket-amount').value='';
+  document.getElementById('ticket-note').value='';
+  document.getElementById('ticket-category').value='';
+  const sel=document.getElementById('ticket-project');
+  sel.innerHTML='<option value="">Sin proyecto</option>'+state.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+
+  showToast('🗜️ Comprimiendo imagen…');
+  const compressed=await compressImage(file);
+  state.currentTicketImg=compressed;
+  const imgEl=document.getElementById('ticket-preview');
+  imgEl.src=compressed; imgEl.style.display='block';
+
+  document.getElementById('ocr-loading').classList.add('active');
+  const text=await runOCR(file);
+  document.getElementById('ocr-loading').classList.remove('active');
+  if(text){
+    document.getElementById('ocr-result').textContent=text;
+    document.getElementById('ocr-result').classList.remove('placeholder');
+    const amt=extractAmount(text); if(amt)document.getElementById('ticket-amount').value=amt;
+  } else {
+    document.getElementById('ocr-result').textContent='No se pudo leer texto. Escríbelo abajo.';
+  }
+}
+
+function closeOcrModal(){ document.getElementById('ocr-modal').classList.remove('open'); }
+
+function saveTicket(){
+  const text=document.getElementById('ocr-result').textContent;
+  const amount=document.getElementById('ticket-amount').value.trim();
+  const note=document.getElementById('ticket-note').value.trim();
+  const category=document.getElementById('ticket-category').value;
+  const projectId=document.getElementById('ticket-project').value||null;
+  if(!text||text.includes('aparecerá aquí')){alert('Primero sube una foto de ticket.');return;}
+  const ticket={id:Date.now(),text,amount,note,category,projectId,img:state.currentTicketImg,date:Date.now(),synced:false};
+  state.tickets.unshift(ticket); save(); closeOcrModal(); renderTickets();
+  autoSyncTicket(ticket);
+}
+
+function deleteTicket(id){ state.tickets=state.tickets.filter(t=>t.id!==id); save(); renderTickets(); }
+
+function renderTickets(){
+  const q=(document.getElementById('ticket-search').value||'').toLowerCase().trim();
+  let items=state.tickets;
+  if(q) items=items.filter(t=>(t.text||'').toLowerCase().includes(q)||(t.amount||'').toLowerCase().includes(q)||(t.note||'').toLowerCase().includes(q)||(t.category||'').toLowerCase().includes(q)||(getProjName(t.projectId)||'').toLowerCase().includes(q));
+  document.getElementById('tickets-count-label').textContent=`${items.length} ticket(s)`;
+  const total=items.reduce((s,t)=>s+parseAmt(t.amount),0);
+  document.getElementById('total-amount').textContent=fmtMXN(total);
+  document.getElementById('total-count').textContent=`${items.length} ticket${items.length!==1?'s':''}${q?' filtrado':''}`;
+  const list=document.getElementById('tickets-list');
+  if(!items.length){ list.innerHTML=`<div class="empty"><div class="empty-icon">🧾</div>${q?'Sin resultados.':'No hay tickets aún.<br>Sube una foto para empezar.'}</div>`; return; }
+  list.innerHTML=items.map(t=>{
+    const pn=getProjName(t.projectId);
+    return `<div class="ticket-item" onclick="viewImg('${t.img||''}')">
+      ${t.img?`<img class="ticket-thumb" src="${t.img}" alt="">` : `<div class="ticket-thumb-ph">🧾</div>`}
+      <div class="ticket-info">
+        <div style="display:flex;align-items:center">
+          ${t.amount?`<div class="ticket-amount">${hl(t.amount,q)}</div>`:''}
+          <span class="synced-dot ${t.synced?'ok':''}" title="${t.synced?'En Drive':'Pendiente'}"></span>
+        </div>
+        <div style="margin-top:4px">
+          ${t.category?`<span class="tag-badge cat-badge">${esc(t.category)}</span>`:''}
+          ${pn?`<span class="tag-badge">📍 ${hl(pn,q)}</span>`:''}
+        </div>
+        ${t.note?`<div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${hl(t.note,q)}</div>`:''}
+        <div class="ticket-date">${fmtDate(t.date)}</div>
+      </div>
+      <button class="ticket-delete" onclick="event.stopPropagation();deleteTicket(${t.id})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+// PROJECTS
+function openNewProjectModal(){ document.getElementById('new-project-modal').classList.add('open'); document.getElementById('new-project-name').value=''; document.getElementById('new-project-address').value=''; setTimeout(()=>document.getElementById('new-project-name').focus(),100); }
+function closeNewProjectModal(){ document.getElementById('new-project-modal').classList.remove('open'); }
+
+function createProject(){
+  const name=document.getElementById('new-project-name').value.trim(); if(!name){alert('Escribe un nombre.');return;}
+  const address=document.getElementById('new-project-address').value.trim();
+  state.projects.unshift({id:Date.now(),name,address,photos:[],created:Date.now()});
+  save(); closeNewProjectModal(); renderProjects();
+}
+
+function openProjectDetail(id){
+  state.currentProjectId=id;
+  const proj=state.projects.find(p=>p.id===id); if(!proj)return;
+  document.getElementById('detail-project-name').textContent=proj.name;
+  document.getElementById('detail-project-address').textContent=proj.address||'';
+  cancelSelectMode();
+  renderDetailPhotos(proj);
+  renderDetailTickets(proj);
+  document.getElementById('project-detail-modal').classList.add('open');
+}
+function closeProjectDetail(){ document.getElementById('project-detail-modal').classList.remove('open'); renderProjects(); }
+
+function renderDetailTickets(proj){
+  const linked=state.tickets.filter(t=>String(t.projectId)===String(proj.id));
+  const wrap=document.getElementById('detail-tickets-wrap');
+  if(!linked.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  document.getElementById('detail-tickets-list').innerHTML=linked.map(t=>`
+    <div class="detail-ticket-row">
+      <div>
+        ${t.category?`<div style="font-size:11px;color:var(--accent2);font-family:'DM Mono',monospace">${esc(t.category)}</div>`:''}
+        <div style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">${fmtDate(t.date)}${t.note?' · '+esc(t.note):''}</div>
+      </div>
+      <div style="font-family:'DM Mono',monospace;font-size:15px;font-weight:700;color:var(--accent)">${esc(t.amount||'—')}</div>
+    </div>`).join('');
+  const total=linked.reduce((s,t)=>s+parseAmt(t.amount),0);
+  document.getElementById('detail-tickets-total').textContent=`Total: ${fmtMXN(total)}`;
+}
+
+function renderDetailPhotos(proj){
+  const grid=document.getElementById('detail-photo-grid');
+  document.getElementById('detail-photos-count').textContent=`${proj.photos.length} foto(s)`;
+  grid.innerHTML=proj.photos.map((p,i)=>`
+    <div class="photo-cell${selectedPhotos.has(i)?' selected':''}" id="pc-${i}" onclick="${selectMode?`toggleSel(${i})`:`viewImg('${p.img}')`}">
+      <img src="${p.img}" alt="">
+      <div class="photo-check">✓</div>
+    </div>`).join('')+`<div class="photo-grid-add" onclick="document.getElementById('project-photo-input').click()">＋</div>`;
+}
+
+function addPhotoToProject(e){
+  const file=e.target.files[0]; if(!file)return; e.target.value='';
+  showToast('🗜️ Comprimiendo…');
+  compressImage(file).then(compressed=>{
+    const proj=state.projects.find(p=>p.id===state.currentProjectId); if(!proj)return;
+    const photo={img:compressed,date:Date.now(),synced:false};
+    proj.photos.unshift(photo); save(); renderDetailPhotos(proj); renderProjects();
+    autoSyncPhoto(proj,photo);
+  });
+}
+
+function renderProjects(){
+  const q=(document.getElementById('project-search').value||'').toLowerCase().trim();
+  let items=state.projects;
+  if(q)items=items.filter(p=>(p.name||'').toLowerCase().includes(q)||(p.address||'').toLowerCase().includes(q));
+  document.getElementById('projects-count-label').textContent=`${items.length} proyecto(s)`;
+  const list=document.getElementById('projects-list');
+  if(!items.length){list.innerHTML=`<div class="empty"><div class="empty-icon">🏗️</div>${q?'Sin resultados.':'Sin proyectos aún.<br>Crea uno para empezar.'}</div>`;return;}
+  list.innerHTML=items.map(p=>{
+    const linked=state.tickets.filter(t=>String(t.projectId)===String(p.id));
+    const total=linked.reduce((s,t)=>s+parseAmt(t.amount),0);
+    return `<div class="project-card" onclick="openProjectDetail(${p.id})">
+      <div class="project-header">
+        <div><div class="project-name">${hl(p.name,q)}</div>${p.address?`<div class="project-meta">📍 ${hl(p.address,q)}</div>`:''}<div class="project-meta">${fmtDate(p.created)}</div></div>
+        <div class="project-badge">${p.photos.length} foto${p.photos.length!==1?'s':''}</div>
+      </div>
+      ${linked.length?`<div class="project-total">💰 ${linked.length} ticket${linked.length!==1?'s':''} · ${fmtMXN(total)}</div>`:''}
+      ${p.photos.length?`<div class="project-thumbs">${p.photos.slice(0,5).map(ph=>`<img class="project-thumb" src="${ph.img}" alt="">`).join('')}${p.photos.length>5?`<div style="width:72px;height:72px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);flex-shrink:0">+${p.photos.length-5}</div>`:''}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// PDF SELECT MODE
+function enterSelectMode(){ selectMode=true; selectedPhotos.clear(); document.getElementById('select-bar').classList.add('active'); document.getElementById('pdf-btn').style.display='none'; const proj=state.projects.find(p=>p.id===state.currentProjectId); if(proj)renderDetailPhotos(proj); updateSelCount(); }
+function cancelSelectMode(){ selectMode=false; selectedPhotos.clear(); document.getElementById('select-bar').classList.remove('active'); const b=document.getElementById('pdf-btn'); if(b)b.style.display=''; const proj=state.projects.find(p=>p.id===state.currentProjectId); if(proj)renderDetailPhotos(proj); }
+function toggleSel(i){ if(selectedPhotos.has(i))selectedPhotos.delete(i);else selectedPhotos.add(i); const cell=document.getElementById(`pc-${i}`); if(cell)cell.classList.toggle('selected',selectedPhotos.has(i)); updateSelCount(); }
+function updateSelCount(){ document.getElementById('selected-count-lbl').textContent=`${selectedPhotos.size} foto${selectedPhotos.size!==1?'s':''} seleccionada${selectedPhotos.size!==1?'s':''}`;  }
+
+async function generatePDF(){
+  if(!selectedPhotos.size){showToast('Selecciona al menos una foto');return;}
+  const proj=state.projects.find(p=>p.id===state.currentProjectId); if(!proj)return;
+  showToast('📄 Generando PDF…');
+  if(!window.jspdf){
+    await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+  }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,H=297;
+
+  // Cover
+  doc.setFillColor(10,10,10); doc.rect(0,0,W,H,'F');
+  doc.setTextColor(232,255,71); doc.setFontSize(30); doc.setFont('helvetica','bold');
+  doc.text(proj.name,W/2,95,{align:'center'});
+  doc.setTextColor(100,100,100); doc.setFontSize(12); doc.setFont('helvetica','normal');
+  if(proj.address)doc.text(proj.address,W/2,110,{align:'center'});
+  doc.text(new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'long',year:'numeric'}),W/2,122,{align:'center'});
+  doc.text(`${selectedPhotos.size} foto${selectedPhotos.size!==1?'s':''}`,W/2,132,{align:'center'});
+
+  doc.setTextColor(60,60,60); doc.setFontSize(9); doc.text('FieldKit',W/2,280,{align:'center'});
+
+  // Photos 2 per page
+  const indices=[...selectedPhotos].sort((a,b)=>a-b);
+  const photos=indices.map(i=>proj.photos[i]).filter(Boolean);
+  for(let i=0;i<photos.length;i+=2){
+    doc.addPage(); doc.setFillColor(10,10,10); doc.rect(0,0,W,H,'F');
+    for(let j=0;j<2&&i+j<photos.length;j++){
+      const ph=photos[i+j]; const y=15+j*138;
+      try{ doc.addImage(ph.img,'JPEG',20,y,170,120,'','MEDIUM'); }catch(ex){}
+      doc.setTextColor(90,90,90); doc.setFontSize(9);
+      doc.text(fmtDate(ph.date),22,y+124);
+      doc.text(`${proj.name} · ${i+j+1}/${photos.length}`,W-22,y+124,{align:'right'});
+    }
+  }
+  doc.save(`${proj.name}_reporte.pdf`);
+  showToast(`✓ PDF con ${photos.length} foto${photos.length!==1?'s':''}`);
+  cancelSelectMode();
+}
+
+// IMAGE VIEWER
+function viewImg(src){ if(!src||selectMode)return; document.getElementById('img-viewer-img').src=src; document.getElementById('img-viewer').classList.add('open'); }
+function closeImgViewer(){ document.getElementById('img-viewer').classList.remove('open'); }
+
+// GOOGLE DRIVE
+const GDRIVE_CLIENT_ID='901427226044-f1h6v8h2p6lfpree8ude6bhr19ftb3rc.apps.googleusercontent.com';
+const GDRIVE_SCOPES='https://www.googleapis.com/auth/drive.file';
+let driveToken=null,driveTokenExpiry=null;
+
+function saveDriveSession(token,exp){ const expiry=Date.now()+(exp-60)*1000; try{localStorage.setItem('fieldkit_drive_token',token);localStorage.setItem('fieldkit_drive_expiry',expiry.toString());}catch(e){} driveToken=token;driveTokenExpiry=expiry; }
+function loadDriveSession(){ try{ const token=localStorage.getItem('fieldkit_drive_token'); const expiry=parseInt(localStorage.getItem('fieldkit_drive_expiry')||'0'); if(token&&expiry>Date.now()){driveToken=token;driveTokenExpiry=expiry;return true;} }catch(e){} return false; }
+function clearDriveSession(){ try{localStorage.removeItem('fieldkit_drive_token');localStorage.removeItem('fieldkit_drive_expiry');}catch(e){} driveToken=null;driveTokenExpiry=null; }
+function scheduleTokenRefresh(){ if(!driveTokenExpiry)return; setTimeout(()=>silentReconnect(),driveTokenExpiry-Date.now()); }
+function silentReconnect(){ try{ const c=google.accounts.oauth2.initTokenClient({client_id:GDRIVE_CLIENT_ID,scope:GDRIVE_SCOPES,prompt:'',callback:(r)=>{if(r.access_token){saveDriveSession(r.access_token,r.expires_in||3600);updateDriveUI();scheduleTokenRefresh();}}}); c.requestAccessToken({prompt:''}); }catch(e){} }
+function updateDriveUI(){ const dot=document.getElementById('drive-dot'),txt=document.getElementById('drive-status-text'),btn=document.getElementById('drive-connect-btn'); if(driveToken){dot.classList.add('connected');txt.textContent='Google Drive conectado ✓';btn.textContent='Desconectar';btn.onclick=disconnectDrive;}else{dot.classList.remove('connected');txt.textContent='Google Drive desconectado';btn.textContent='Conectar';btn.onclick=connectDrive;} }
+function connectDrive(){ const c=google.accounts.oauth2.initTokenClient({client_id:GDRIVE_CLIENT_ID,scope:GDRIVE_SCOPES,callback:(r)=>{if(r.access_token){saveDriveSession(r.access_token,r.expires_in||3600);updateDriveUI();scheduleTokenRefresh();syncPending();showToast('✓ Google Drive conectado');}}}); c.requestAccessToken(); }
+function disconnectDrive(){ if(driveToken)google.accounts.oauth2.revoke(driveToken); clearDriveSession(); updateDriveUI(); showToast('Drive desconectado'); }
+
+async function getOrCreateFolder(name,parentId){ const q=`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parentId?` and '${parentId}' in parents`:''}`; const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`,{headers:{Authorization:`Bearer ${driveToken}`}}); const d=await r.json(); if(d.files&&d.files.length)return d.files[0].id; const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${driveToken}`,'Content-Type':'application/json'},body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',...(parentId?{parents:[parentId]}:{})})}); return(await cr.json()).id; }
+async function uploadFileToDrive(b64,filename,mime,folderId){ const bs=atob(b64.split(',')[1]); const ab=new ArrayBuffer(bs.length); const ia=new Uint8Array(ab); for(let i=0;i<bs.length;i++)ia[i]=bs.charCodeAt(i); const blob=new Blob([ab],{type:mime}); const form=new FormData(); form.append('metadata',new Blob([JSON.stringify({name:filename,parents:[folderId]})],{type:'application/json'})); form.append('file',blob); return(await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{method:'POST',headers:{Authorization:`Bearer ${driveToken}`},body:form})).json(); }
+
+// AUTO SYNC
+let syncInProgress=false;
+async function autoSyncTicket(ticket){ if(!navigator.onLine){showToast('📵 Sin internet — se subirá cuando regrese');return;} if(!driveToken){showToast('☁️ Guardado localmente — conecta Drive para sincronizar');return;} try{ showToast('⬆️ Sincronizando ticket…'); const rid=await getOrCreateFolder('FieldKit'); const tid=await getOrCreateFolder('Tickets',rid); const d=new Date(ticket.date).toISOString().slice(0,10); await uploadFileToDrive(ticket.img,`ticket_${d}_${ticket.id}.jpg`,'image/jpeg',tid); const txt=`Fecha: ${new Date(ticket.date).toLocaleString('es-MX')}\nMonto: ${ticket.amount}\nCategoría: ${ticket.category||'—'}\nProyecto: ${getProjName(ticket.projectId)||'—'}\nNota: ${ticket.note||'—'}\n\n${ticket.text}`; await uploadFileToDrive('data:text/plain;base64,'+btoa(unescape(encodeURIComponent(txt))),`ticket_${d}_${ticket.id}.txt`,'text/plain',tid); const t=state.tickets.find(t=>t.id===ticket.id); if(t){t.synced=true;save();renderTickets();} showToast('✓ Ticket en Drive'); }catch(e){showToast('⚠️ Error — se reintentará');} }
+async function autoSyncPhoto(proj,photo){ if(!navigator.onLine){showToast('📵 Sin internet — se subirá cuando regrese');return;} if(!driveToken){showToast('☁️ Guardado localmente — conecta Drive para sincronizar');return;} try{ showToast('⬆️ Sincronizando foto…'); const rid=await getOrCreateFolder('FieldKit'); const jid=await getOrCreateFolder('JobSites',rid); const pid=await getOrCreateFolder(proj.name,jid); const d=new Date(photo.date).toISOString().slice(0,10); await uploadFileToDrive(photo.img,`${proj.name}_${d}_${photo.date}.jpg`,'image/jpeg',pid); const p=state.projects.find(x=>x.id===proj.id); if(p){const ph=p.photos.find(x=>x.date===photo.date);if(ph){ph.synced=true;save();}} showToast('✓ Foto en Drive'); }catch(e){showToast('⚠️ Error — se reintentará');} }
+async function syncPending(){ if(syncInProgress||!driveToken||!navigator.onLine)return; syncInProgress=true; const pt=state.tickets.filter(t=>!t.synced&&t.img); const pp=[]; state.projects.forEach(proj=>proj.photos.filter(ph=>!ph.synced).forEach(ph=>pp.push({proj,photo:ph}))); const tot=pt.length+pp.length; if(tot){showToast(`⬆️ Sincronizando ${tot} pendiente(s)…`); for(const t of pt){try{await autoSyncTicket(t);}catch(e){}} for(const{proj,photo}of pp){try{await autoSyncPhoto(proj,photo);}catch(e){}} } syncInProgress=false; updateBadge(); }
+
+function updateBadge(){ const pend=state.tickets.filter(t=>!t.synced).length+state.projects.reduce((a,p)=>a+p.photos.filter(ph=>!ph.synced).length,0); document.getElementById('stats-header').textContent=`${state.tickets.length}T · ${state.projects.length}P${pend>0?` · ⏳${pend}`:''}`; }
+window.addEventListener('online',()=>{showToast('🌐 Conexión restaurada — sincronizando…');setTimeout(syncPending,1000);});
+window.addEventListener('offline',()=>showToast('📵 Sin conexión — guardando localmente'));
+
+// TOAST
+function showToast(msg){ let t=document.getElementById('toast'); if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#1e1e1e;border:1px solid #2a2a2a;color:#f0f0f0;font-family:DM Mono,monospace;font-size:13px;padding:10px 18px;border-radius:20px;z-index:9999;transition:opacity 0.3s;white-space:nowrap;max-width:90vw;text-align:center';document.body.appendChild(t);} t.textContent=msg;t.style.opacity='1';clearTimeout(t._timer);t._timer=setTimeout(()=>t.style.opacity='0',3000); }
+
+// INIT
+load(); renderTickets(); renderProjects();
+if(loadDriveSession()){updateDriveUI();scheduleTokenRefresh();setTimeout(syncPending,2000);}
+else{window.addEventListener('load',()=>setTimeout(silentReconnect,1500));updateDriveUI();}
+setInterval(updateBadge,1000);
+</script>
+</body>
+</html>
